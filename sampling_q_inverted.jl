@@ -104,7 +104,8 @@ chain_params = ChainParams(;
 	model_params,
 	channels,
 	init_params,
-	n_samples = 4096
+	n_chains = 8,
+	n_samples = 120*32
 )
 
 # ╔═╡ c9f2e1d9-4d96-4d96-bcbd-02c6778bc055
@@ -275,7 +276,7 @@ end
 # ╔═╡ 017a39e2-a149-4cc6-befa-438911b87ec6
 begin
 	local p = plot_points_phases(channels, period, mean(samples[:initial_phase]))
-	plot_ribbon_phases(model_params, mesh, channels, samples, p)
+	plot_ribbon_phases(model_params, mesh, channels, sample(samples, 5_000), p)
 end
 
 # ╔═╡ 91bca842-224b-42a2-9ad6-6b337366e474
@@ -296,6 +297,7 @@ PyPlot.svg(true)
 # ╔═╡ 2076e26c-12c1-4e34-a530-b13d71182f9e
 function biplot(samples, levels, color = "black", ax = nothing)
 	if ax == nothing
+		PyPlot.figure()
 		ax = PyPlot.gca()
 	end
 
@@ -320,6 +322,40 @@ end
 
 # ╔═╡ c8f10134-2c3d-4271-baba-bc0abcb914cc
 biplot(samples, [0.95, 0.68, 0], "black")
+
+# ╔═╡ b31cf0d6-0752-4343-ad84-78a98abbfae1
+function estimate_MAP_ci(arr, confidence_level)
+	dist = kde(arr)
+	mx = maximize(x -> pdf(dist, x[1]), [mean(arr)])
+	mx = Optim.maximizer(mx)[1]
+
+	total = sum(dist.density)
+	function percentage(threshold)
+		return sum(filter(pdf -> pdf > threshold, dist.density)) / total
+	end
+
+	threshold = find_zero(
+		threshold -> percentage(threshold) - confidence_level,
+		extrema(dist.density),
+	)
+
+	left_idx = findfirst(dist.density .> threshold)
+	right_idx = findlast(dist.density .> threshold)
+
+	return (mx, (dist.x[left_idx], dist.x[right_idx]))
+end
+
+# ╔═╡ 8e379945-203d-4797-b417-92ad00b13133
+est_q = estimate_MAP_ci(samples[:mass_quotient_inv].data[:], 0.68)
+
+# ╔═╡ 4e372ef7-3a43-4ceb-bb3c-fc883d28b03e
+est_q[2][1] - est_q[1], est_q[2][2] - est_q[1]
+
+# ╔═╡ af53b721-7015-43c8-a012-11595be02c3c
+est_i = estimate_MAP_ci(rad2deg.(samples[:observer_angle].data[:]), 0.68)
+
+# ╔═╡ a07fbced-583d-4584-ba25-2ee022fa6a8b
+est_i[2][1] - est_i[1], est_i[2][2] - est_i[1]
 
 # ╔═╡ Cell order:
 # ╠═25ce51bc-19cb-11ef-22af-9d2f1925f669
@@ -350,3 +386,8 @@ biplot(samples, [0.95, 0.68, 0], "black")
 # ╠═7e14fcde-3895-4af5-8982-6623a62e2038
 # ╠═2076e26c-12c1-4e34-a530-b13d71182f9e
 # ╠═c8f10134-2c3d-4271-baba-bc0abcb914cc
+# ╠═b31cf0d6-0752-4343-ad84-78a98abbfae1
+# ╠═8e379945-203d-4797-b417-92ad00b13133
+# ╠═4e372ef7-3a43-4ceb-bb3c-fc883d28b03e
+# ╠═af53b721-7015-43c8-a012-11595be02c3c
+# ╠═a07fbced-583d-4584-ba25-2ee022fa6a8b

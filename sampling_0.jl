@@ -105,7 +105,8 @@ chain_params = ChainParams(;
 	model_params,
 	channels,
 	init_params,
-	n_samples = 4096
+	n_chains=8,
+	n_samples = 120*32
 )
 
 # ╔═╡ c9f2e1d9-4d96-4d96-bcbd-02c6778bc055
@@ -249,16 +250,16 @@ function plot_ribbon_phases(model_params, interpolated_mesh,
 	phases = -0.25 : 0.01 : 1.25
 
 	for (c, (channel, subplot)) ∈ enumerate(zip(channels, p.subplots))
-		vals = Array{Float64}(undef, length(samples), length(phases))
+		vals = Array{Float64}(undef, size(samples)[1], size(samples)[3], length(phases))
 
-		for s ∈ 1 : length(samples)
-			sample = group_symbols(samples[s])
+		for s1 ∈ 1 : size(samples)[1], s2 ∈ 1 : size(samples)[3]
+			sample = group_symbols(samples[s1, :, s2])
 
-			vals[s, :] = star_magnitude(phases .* 2π, interpolated_mesh, model_params, channel, sample) .+ sample[:offset][c]
+			vals[s1, s2, :] = star_magnitude(phases .* 2π, interpolated_mesh, model_params, channel, sample) .+ sample[:offset][c]
 		end
 
-		means = mean(vals, dims = 1)[1, :]
-		stds = std(vals, dims = 1)[1, :]
+		means = mean(vals, dims = (1, 2))[:]
+		stds = std(vals, dims = (1, 2))[:]
 
 		plot!(
 			subplot,
@@ -276,7 +277,7 @@ end
 # ╔═╡ 017a39e2-a149-4cc6-befa-438911b87ec6
 begin
 	local p = plot_points_phases(channels, period, mean(samples[:initial_phase]))
-	plot_ribbon_phases(model_params, mesh, channels, samples, p)
+	rplot = plot_ribbon_phases(model_params, mesh, channels, sample(samples, 5_000), p)
 end
 
 # ╔═╡ 884089d1-a9ba-41d0-85a6-8ce7de83cb2f
@@ -294,12 +295,16 @@ end
 # ╔═╡ 7853f148-3cfc-4def-946b-eadac15159ad
 ess(samples)
 
+# ╔═╡ c0983d9b-5bb5-438a-942b-14a8582efbad
+samples[2, :, 3]
+
 # ╔═╡ bc02da53-f9aa-439d-884e-87cd39da7f1f
 PyPlot.svg(true)
 
 # ╔═╡ 91bca842-224b-42a2-9ad6-6b337366e474
 function biplot(samples, levels, color = "black", ax = nothing)
 	if ax == nothing
+		PyPlot.figure()
 		ax = PyPlot.gca()
 	end
 
@@ -324,6 +329,43 @@ end
 
 # ╔═╡ 5158fa88-c07a-4406-9f30-7ac5814ed8a2
 biplot(samples, [0.95, 0.68, 0])
+
+# ╔═╡ 94df2966-5278-4364-badd-f9c56315b259
+mean(samples[:mass_quotient_inv]), std(samples[:mass_quotient_inv])
+
+# ╔═╡ ae5ce8b1-ebcf-4f86-b6c7-bc5b8bd8e864
+function estimate_MAP_ci(arr, confidence_level)
+	dist = kde(arr)
+	mx = maximize(x -> pdf(dist, x[1]), [mean(arr)])
+	mx = Optim.maximizer(mx)[1]
+
+	total = sum(dist.density)
+	function percentage(threshold)
+		return sum(filter(pdf -> pdf > threshold, dist.density)) / total
+	end
+
+	threshold = find_zero(
+		threshold -> percentage(threshold) - confidence_level,
+		extrema(dist.density),
+	)
+
+	left_idx = findfirst(dist.density .> threshold)
+	right_idx = findlast(dist.density .> threshold)
+
+	return (mx, (dist.x[left_idx], dist.x[right_idx]))
+end
+
+# ╔═╡ d29c9e6e-2a5c-435e-8895-01b1cb2ff31c
+est_q = estimate_MAP_ci(samples[:mass_quotient_inv].data[:], 0.68)
+
+# ╔═╡ 621253f6-68d2-4d9e-8fb5-f4513a3a455b
+est_q[2][1] - est_q[1], est_q[2][2] - est_q[1]
+
+# ╔═╡ 91a362e6-1097-4ee1-8a45-b26d5261b14d
+est_i = estimate_MAP_ci(rad2deg.(samples[:observer_angle].data[:]), 0.68)
+
+# ╔═╡ 9e78fc3c-7ba2-46af-88dd-a1d5527aad8e
+est_i[2][1] - est_i[1], est_i[2][2] - est_i[1]
 
 # ╔═╡ Cell order:
 # ╠═25ce51bc-19cb-11ef-22af-9d2f1925f669
@@ -352,6 +394,13 @@ biplot(samples, [0.95, 0.68, 0])
 # ╠═017a39e2-a149-4cc6-befa-438911b87ec6
 # ╠═884089d1-a9ba-41d0-85a6-8ce7de83cb2f
 # ╠═7853f148-3cfc-4def-946b-eadac15159ad
+# ╠═c0983d9b-5bb5-438a-942b-14a8582efbad
 # ╠═bc02da53-f9aa-439d-884e-87cd39da7f1f
 # ╠═91bca842-224b-42a2-9ad6-6b337366e474
 # ╠═5158fa88-c07a-4406-9f30-7ac5814ed8a2
+# ╠═94df2966-5278-4364-badd-f9c56315b259
+# ╠═ae5ce8b1-ebcf-4f86-b6c7-bc5b8bd8e864
+# ╠═d29c9e6e-2a5c-435e-8895-01b1cb2ff31c
+# ╠═621253f6-68d2-4d9e-8fb5-f4513a3a455b
+# ╠═91a362e6-1097-4ee1-8a45-b26d5261b14d
+# ╠═9e78fc3c-7ba2-46af-88dd-a1d5527aad8e
