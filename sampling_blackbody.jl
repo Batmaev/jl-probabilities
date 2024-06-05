@@ -56,7 +56,7 @@ mesh_params = MeshParams()
 mesh = InterpolatedRocheMesh(mesh_params);
 
 # ╔═╡ a6d96625-71e8-4b3a-b82e-9c21cdfdbab5
-model_params = ModelParams(; period)
+model_params = ModelParams(; period, model_function = mq_inverted_model)
 
 # ╔═╡ 0af70b03-c53f-415d-8f4f-f8bf6c383f3f
 channels = [
@@ -83,6 +83,7 @@ begin
 	local m_giant = 0.8
 	local m_dwarf = 1.0
 	local mass_quotient = m_dwarf / m_giant
+	local mass_quotient_inv = m_giant / m_dwarf
 
 	local cos_i = 0.5
 	local observer_angle = acos(cos_i)
@@ -91,7 +92,7 @@ begin
 	local offset = [18.85, 21.17]
 	local log_σ_common = log.([0.01, 0.01])
 
-	init_params = (; m_giant, m_dwarf, mass_quotient, cos_i, observer_angle, initial_phase, offset, log_σ_common)
+	init_params = (; m_giant, m_dwarf, mass_quotient, mass_quotient_inv, cos_i, observer_angle, initial_phase, offset, log_σ_common)
 end
 
 # ╔═╡ 81a1e646-8e76-44cb-8302-5ec00134599e

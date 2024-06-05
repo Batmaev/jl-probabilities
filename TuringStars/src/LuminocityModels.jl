@@ -18,9 +18,10 @@ export
     ChainParams,
     zeroth_model,
     first_model_legacy,
-    q_uniform_model,
-    q_inverted_model,
+    mq_uniform_model,
+    mq_inverted_model,
     star_magnitude,
+    star_magnitude_smoker,
     @dist_or_const
 
 
@@ -124,6 +125,24 @@ star_magnitude(
     channel.darkening_coefs_interpolant
 )
 
+star_magnitude_smoker(
+    phases,
+    interpolated_mesh,
+    model_params::ModelParams,
+    channel::ChannelParams,
+    sample
+) = star_magnitude(
+    phases;
+    mass_quotient = 1 ./ sample[:mass_quotient],
+    observer_angle = sample[:observer_angle],
+    model_params.temperature_at_bottom,
+    model_params.β,
+    interpolated_mesh,
+    channel.luminocity_function,
+    channel.darkening_function,
+    channel.darkening_coefs_interpolant
+)
+
 
 function zeroth_model(mesh_params, model_params, channels)
     interpolated_mesh = InterpolatedRocheMesh(mesh_params)
@@ -207,7 +226,7 @@ StructTypes.StructType(::typeof(first_model_legacy)) = StructTypes.StringType()
 
 
 
-function q_uniform_model(mesh_params, model_params, channels)
+function mq_uniform_model(mesh_params, model_params, channels)
     interpolated_mesh = InterpolatedRocheMesh(mesh_params)
 
     @model function model(channels::Vector{ChannelParams}, measurements_y = Float64[])
@@ -245,11 +264,11 @@ function q_uniform_model(mesh_params, model_params, channels)
     return model(channels)
 end
 
-StructTypes.StructType(::typeof(q_uniform_model)) = StructTypes.StringType()
+StructTypes.StructType(::typeof(mq_uniform_model)) = StructTypes.StringType()
 
 
 
-function q_inverted_model(mesh_params, model_params, channels)
+function mq_inverted_model(mesh_params, model_params, channels)
     interpolated_mesh = InterpolatedRocheMesh(mesh_params)
 
     @model function model(channels::Vector{ChannelParams}, measurements_y = Float64[])
@@ -287,7 +306,7 @@ function q_inverted_model(mesh_params, model_params, channels)
     return model(channels)
 end
 
-StructTypes.StructType(::typeof(q_inverted_model)) = StructTypes.StringType()
+StructTypes.StructType(::typeof(mq_inverted_model)) = StructTypes.StringType()
 
 
 

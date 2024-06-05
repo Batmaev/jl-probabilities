@@ -27,6 +27,9 @@ begin
 	using Optim
 end
 
+# ╔═╡ cf1f5fab-fc8c-4e51-b364-c2cd56e002c2
+using StatsBase
+
 # ╔═╡ 2c36d253-132b-471f-a395-28479e55562d
 begin
 	plotlyjs()
@@ -302,18 +305,18 @@ samples[2, :, 3]
 PyPlot.svg(true)
 
 # ╔═╡ 91bca842-224b-42a2-9ad6-6b337366e474
-function biplot(samples, levels, color = "black", ax = nothing)
+function biplot(x, y, levels, color = "black", ax = nothing)
 	if ax == nothing
 		PyPlot.figure()
 		ax = PyPlot.gca()
 	end
 
 	k = kde((
-		reshape(1 ./ samples[:mass_quotient], :),
-		reshape(rad2deg.(samples[:observer_angle]), :),
+		reshape(x, :),
+		reshape(y, :),
 	))
 
-	mx = maximize(x -> pdf(k, x[1], x[2]), [0.5, 50.])
+	mx = maximize(x -> pdf(k, x[1], x[2]), [mean(x), mean(y)])
 	max_point = Optim.maximizer(mx)
 
 	thresholds = get_threshold.(Ref(k), levels)
@@ -324,11 +327,12 @@ function biplot(samples, levels, color = "black", ax = nothing)
 		colors = color,
 	)
 	ax.scatter([max_point[1]], [max_point[2]], color = color)
+	print(max_point)
 	PyPlot.gcf()
 end
 
 # ╔═╡ 5158fa88-c07a-4406-9f30-7ac5814ed8a2
-biplot(samples, [0.95, 0.68, 0])
+biplot(samples[:mass_quotient_inv][:], rad2deg.(samples[:observer_angle][:]), [0.95, 0.68, 0])
 
 # ╔═╡ 94df2966-5278-4364-badd-f9c56315b259
 mean(samples[:mass_quotient_inv]), std(samples[:mass_quotient_inv])
@@ -367,6 +371,27 @@ est_i = estimate_MAP_ci(rad2deg.(samples[:observer_angle].data[:]), 0.68)
 # ╔═╡ 9e78fc3c-7ba2-46af-88dd-a1d5527aad8e
 est_i[2][1] - est_i[1], est_i[2][2] - est_i[1]
 
+# ╔═╡ 015e2ad0-65e9-43d3-b639-e1d77a348a28
+biplot(samples[:m_dwarf][:], samples[:m_giant][:], [0.95, 0.68, 0])
+
+# ╔═╡ 01d21747-7701-4658-b7f8-26d285af7bf3
+biplot(samples[:m_dwarf][:], samples[:m_giant][:], [0.95, 0.68, 0])
+
+# ╔═╡ ec91cfe1-9422-4017-ae9b-553a7bc86fdf
+0.95 / 1.31
+
+# ╔═╡ 7bf7d31b-d098-4bdd-b3c7-768c1c6c48c8
+mode(samples[:m_dwarf])
+
+# ╔═╡ 325e3d23-ba4e-4d95-9dd7-c2b1e91b6db9
+coeftable(model_params.model_function(mesh_params, model_params, channels))
+
+# ╔═╡ 15b39d12-3ca0-4cf3-8387-c004f4ce787e
+coeftable(samples)
+
+# ╔═╡ 841359b6-f44d-447c-b4e0-5a3bc2cb9341
+confint(StatisticalModel(samples))
+
 # ╔═╡ Cell order:
 # ╠═25ce51bc-19cb-11ef-22af-9d2f1925f669
 # ╠═2c36d253-132b-471f-a395-28479e55562d
@@ -404,3 +429,11 @@ est_i[2][1] - est_i[1], est_i[2][2] - est_i[1]
 # ╠═621253f6-68d2-4d9e-8fb5-f4513a3a455b
 # ╠═91a362e6-1097-4ee1-8a45-b26d5261b14d
 # ╠═9e78fc3c-7ba2-46af-88dd-a1d5527aad8e
+# ╠═015e2ad0-65e9-43d3-b639-e1d77a348a28
+# ╠═01d21747-7701-4658-b7f8-26d285af7bf3
+# ╠═ec91cfe1-9422-4017-ae9b-553a7bc86fdf
+# ╠═7bf7d31b-d098-4bdd-b3c7-768c1c6c48c8
+# ╠═cf1f5fab-fc8c-4e51-b364-c2cd56e002c2
+# ╠═325e3d23-ba4e-4d95-9dd7-c2b1e91b6db9
+# ╠═15b39d12-3ca0-4cf3-8387-c004f4ce787e
+# ╠═841359b6-f44d-447c-b4e0-5a3bc2cb9341

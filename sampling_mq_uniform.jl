@@ -53,7 +53,7 @@ mesh_params = MeshParams()
 mesh = InterpolatedRocheMesh(mesh_params);
 
 # ╔═╡ a6d96625-71e8-4b3a-b82e-9c21cdfdbab5
-model_params = ModelParams(; period, model_function = q_uniform_model)
+model_params = ModelParams(; period, model_function = mq_uniform_model)
 
 # ╔═╡ 0af70b03-c53f-415d-8f4f-f8bf6c383f3f
 channels = [
@@ -104,7 +104,7 @@ chain_params = ChainParams(;
 	channels,
 	init_params,
 	n_chains = 8,
-	n_samples = 120*8
+	n_samples = 120*32
 )
 
 # ╔═╡ c9f2e1d9-4d96-4d96-bcbd-02c6778bc055
@@ -188,7 +188,7 @@ samples = cached_sample(chain_params)
 # ╔═╡ 802213be-600a-4f19-807d-bad83ac62257
 begin
 	sampled_values = samples[collect(values(samples.info.varname_to_symbol))]
-	CSV.write("samples/q_uniform.csv", sampled_values)
+	CSV.write("samples/mq_uniform.csv", sampled_values)
 end;
 
 # ╔═╡ 994aeb01-a8fb-4c15-af3e-f367fb237ae8
