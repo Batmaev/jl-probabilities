@@ -335,6 +335,9 @@ MAP_mq_inv = MAP_point(instance_mq_inv, init_params_0)
 # ╔═╡ c5bc01de-c96c-40d2-9b9f-d068ec054798
 MAP_bb = MAP_point(instance_bb, init_params_bb)
 
+# ╔═╡ 330bd401-59e6-4ed7-9695-7aa4a3864754
+rad2deg.(MAP_mq_inv[:observer_angle])[1], rad2deg.(MAP_bb[:observer_angle])[1]
+
 # ╔═╡ 8cf3d1d8-503f-47ec-abf1-b8e2293b96bf
 # begin
 # 	var_info = DynamicPPL.VarInfo(instance_0)
@@ -464,23 +467,31 @@ md"### Runs Test"
 WaldWolfowitzTest(differences(model_0, channels_0, MAP_0)[1])
 
 # ╔═╡ 47d295b7-fb33-40e3-84e2-7d788b3c3acf
-function plot_positive_negative(x, y; p = nothing, kwargs...)
-	positive_mask = y .> 0
-	negative_mask = .! positive_mask
-
+function plot_positive_negative(x, y; p = nothing, as_phase = false, kwargs...)
 	if p == nothing
 		p = plot()
 	end
 
+	if as_phase
+		x = vcat(x, x .- 1, x .+ 1)
+		y = vcat(y, y, y)
+	end
+
+	positive_mask = y .> 0
+	negative_mask = .! positive_mask
+
 	scatter!(x[negative_mask], y[negative_mask], markercolor = 1; kwargs...)
 	scatter!(x[positive_mask], y[positive_mask], markercolor = 2; kwargs...)
+
+	if as_phase
+		scatter!(xlim = (-0.2, 1.2))
+	end
+
+	return p
 end
 
 # ╔═╡ 9bbfe3ec-9f74-4eab-8ea5-57b434abdcaa
 plot_positive_negative(y; p = nothing, kwargs...) = plot_positive_negative(1 : length(y), y; p, kwargs...)
-
-# ╔═╡ de5cfa4f-3c91-4522-b01a-3fe4697cff72
-gr()
 
 # ╔═╡ ed305c32-10ce-4aa0-9df4-d2bb644c2341
 diffs_plot = begin
@@ -492,15 +503,97 @@ diffs_plot = begin
 		size = (600, 350),
 		xlabel = "Номер точки",
 		ylabel = L"m_\mathrm{meas} - m_\mathrm{model}",
-		title = "Разность между измерениями\nи модельной кривой",
+		title = "Разность между измерениями\nи модельной MLE-кривой",
 		top_margin = 30Plots.px
 	)
 	scatter!([], markershape = :+, markersize = 3, markercolor = "grey", label = "Канал K")
 	scatter!([], markersize = 1.5, markercolor = "grey", markerstrokecolor = "grey", label = "Канал J")
 end
 
+# ╔═╡ 62dba5f5-ea81-4ede-9e26-aaef43a749aa
+
+
+# ╔═╡ 1de20223-da84-4876-81c8-b72a8e817f86
+diffs_plot2 = begin
+	gr()
+	days = points.day
+	diffs_plot2 = plot_positive_negative(days, diffs_JK[1]; markershape = :+, label = false)
+	plot_positive_negative(days, diffs_JK[2]; p = diffs_plot, markersize = 2, markerstrokewidth = 0, label = false)
+	plot!(
+		size = (600, 350),
+		xlabel = "JD - JD0",
+		ylabel = L"m_\mathrm{meas} - m_\mathrm{model}",
+		title = "Разность между измерениями\nи модельной MLE-кривой",
+		top_margin = 30Plots.px
+	)
+	scatter!([], markershape = :+, markersize = 3, markercolor = "grey", label = "Канал K")
+	scatter!([], markersize = 1.5, markercolor = "grey", markerstrokecolor = "grey", label = "Канал J")
+	scatter!(legend = :topright)
+end
+
+# ╔═╡ 2e8ba342-dd88-4d9e-b2ca-8a1310b87dde
+perm = sortperm(days)
+
+# ╔═╡ 3a6c4a25-0b56-4ddd-9351-e77c88c32d6e
+WaldWolfowitzTest(differences(model_0, channels_0, MAP_0)[1][perm])
+
+# ╔═╡ 5aae4445-7c8b-47bc-b4fc-22291c095695
+function make_dict(days, vals, period = period)
+	d = Dict(zip(days, vals))
+	unique_vals = values(d)
+	unique_days = collect(keys(d))
+	unique_days .%= period
+	sort(Dict(zip(unique_days, unique_vals)))
+end
+
+# ╔═╡ 68dcf00f-048a-46d4-91e8-7fdc4de0d005
+make_dict(days, diffs_JK[1])
+
+# ╔═╡ e79e3e6a-747b-44c1-aaab-96fc6878dd9c
+WaldWolfowitzTest(collect(values(make_dict(days, diffs_JK[1]))))
+
+# ╔═╡ c0a1ae8c-5d5a-4bfc-b37d-77be96b84eef
+WaldWolfowitzTest(collect(values(make_dict(days, diffs_JK[2]))))
+
+# ╔═╡ b8fa7ac4-484a-4807-9321-69d8acdf3d8c
+diffs_plot3 = begin
+	gr()
+	local days = points.day .% period
+	diffs_dicts = [make_dict(days, diffs_JK[1]), make_dict(days, diffs_JK[2])]
+
+	initial_phase = MAP_mq_inv[:initial_phase].data[1] / 2π
+	phases = collect(keys(diffs_dicts[1])) ./ period .+ initial_phase
+
+	diffs_plot3 = plot_positive_negative(
+		phases,
+		collect(values(make_dict(days, diffs_JK[1])));
+		markershape = :+,
+		label = false,
+		as_phase = true
+	)
+	plot_positive_negative(
+		phases,
+		collect(values(make_dict(days, diffs_JK[2])));
+		p = diffs_plot3,
+		markersize = 2,
+		markerstrokewidth = 0,
+		label = false,
+		as_phase = true
+	)
+	plot!(
+		size = (600, 350),
+		xlabel = "фаза",
+		ylabel = L"m_\mathrm{meas} - m_\mathrm{model}",
+		title = "Разность между измерениями\nи модельной MLE-кривой",
+		top_margin = 30Plots.px
+	)
+	scatter!([], markershape = :+, markersize = 3, markercolor = "grey", label = "Канал K")
+	scatter!([], markersize = 1.5, markercolor = "grey", markerstrokecolor = "grey", label = "Канал J")
+	scatter!(legend = :top)
+end
+
 # ╔═╡ 992778bc-59bd-40e1-b313-66c1f2ef34c3
-savefig(diffs_plot, "tex/pic_drafts/residuals.pdf")
+savefig(diffs_plot3, "tex/pic_drafts/residuals-residuals.pdf")
 
 # ╔═╡ Cell order:
 # ╠═11decfb6-8f0a-11ee-1bf8-d3faf8756b8b
@@ -533,6 +626,7 @@ savefig(diffs_plot, "tex/pic_drafts/residuals.pdf")
 # ╠═67391953-6f49-466e-bc72-349d9df43b0b
 # ╠═09c08a94-a567-4ba8-af64-424e9dbbe75b
 # ╠═c5bc01de-c96c-40d2-9b9f-d068ec054798
+# ╠═330bd401-59e6-4ed7-9695-7aa4a3864754
 # ╠═8cf3d1d8-503f-47ec-abf1-b8e2293b96bf
 # ╠═2e887134-51f0-421e-9a89-c939c714a671
 # ╠═14c44a4c-d5e0-4e04-a74d-506695b0a499
@@ -557,6 +651,14 @@ savefig(diffs_plot, "tex/pic_drafts/residuals.pdf")
 # ╠═47d295b7-fb33-40e3-84e2-7d788b3c3acf
 # ╠═9bbfe3ec-9f74-4eab-8ea5-57b434abdcaa
 # ╠═512ace6e-9008-4d4a-b513-3be764fe3ad4
-# ╠═de5cfa4f-3c91-4522-b01a-3fe4697cff72
 # ╠═ed305c32-10ce-4aa0-9df4-d2bb644c2341
+# ╠═62dba5f5-ea81-4ede-9e26-aaef43a749aa
+# ╠═1de20223-da84-4876-81c8-b72a8e817f86
+# ╠═2e8ba342-dd88-4d9e-b2ca-8a1310b87dde
+# ╠═3a6c4a25-0b56-4ddd-9351-e77c88c32d6e
+# ╠═5aae4445-7c8b-47bc-b4fc-22291c095695
+# ╠═68dcf00f-048a-46d4-91e8-7fdc4de0d005
+# ╠═e79e3e6a-747b-44c1-aaab-96fc6878dd9c
+# ╠═c0a1ae8c-5d5a-4bfc-b37d-77be96b84eef
+# ╠═b8fa7ac4-484a-4807-9321-69d8acdf3d8c
 # ╠═992778bc-59bd-40e1-b313-66c1f2ef34c3
