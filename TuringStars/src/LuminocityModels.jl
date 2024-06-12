@@ -20,6 +20,8 @@ export
     first_model_legacy,
     mq_uniform_model,
     mq_inverted_model,
+    q_uniform_model,
+    q_inverted_model,
     star_magnitude,
     star_magnitude_smoker,
     @dist_or_const
@@ -226,7 +228,7 @@ StructTypes.StructType(::typeof(first_model_legacy)) = StructTypes.StringType()
 
 
 
-function mq_uniform_model(mesh_params, model_params, channels)
+function q_uniform_model(mesh_params, model_params, channels)
     interpolated_mesh = InterpolatedRocheMesh(mesh_params)
 
     @model function model(channels::Vector{ChannelParams}, measurements_y = Float64[])
@@ -264,11 +266,12 @@ function mq_uniform_model(mesh_params, model_params, channels)
     return model(channels)
 end
 
+mq_uniform_model = q_uniform_model
 StructTypes.StructType(::typeof(mq_uniform_model)) = StructTypes.StringType()
 
 
 
-function mq_inverted_model(mesh_params, model_params, channels)
+function q_inverted_model(mesh_params, model_params, channels)
     interpolated_mesh = InterpolatedRocheMesh(mesh_params)
 
     @model function model(channels::Vector{ChannelParams}, measurements_y = Float64[])
@@ -306,7 +309,8 @@ function mq_inverted_model(mesh_params, model_params, channels)
     return model(channels)
 end
 
-StructTypes.StructType(::typeof(mq_inverted_model)) = StructTypes.StringType()
+mq_inverted_model = q_inverted_model
+StructTypes.StructType(::typeof(q_inverted_model)) = StructTypes.StringType()
 
 
 

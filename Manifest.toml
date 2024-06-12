@@ -2563,7 +2563,7 @@ version = "0.32.0"
     Optim = "429524aa-4258-5aef-a3af-852621145aeb"
 
 [[deps.TuringStars]]
-deps = ["DelimitedFiles", "ForwardDiff", "GeoTables", "Interpolations", "JSON3", "LinearAlgebra", "Meshes", "QuadGK", "Reexport", "Revise", "Roots", "SHA", "Serialization", "StructTypes", "Turing"]
+deps = ["DelimitedFiles", "FillArrays", "ForwardDiff", "GeoTables", "Interpolations", "JSON3", "LinearAlgebra", "Meshes", "QuadGK", "Reexport", "Revise", "Roots", "SHA", "Serialization", "StructTypes", "Turing"]
 path = "TuringStars"
 uuid = "95955baf-4ac1-410e-9061-95296ea9737c"
 version = "0.1.0"
